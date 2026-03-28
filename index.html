@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZablonVault | Matrix Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Fira+Code&display=swap');
+        
+        body { background: #010103; color: white; font-family: 'Inter', sans-serif; overflow: hidden; margin: 0; }
+        
+        /* Glassmorphism for the central dashboard */
+        .glass { 
+            background: rgba(10, 10, 15, 0.75); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .terminal { background: rgba(0, 0, 0, 0.6); font-family: 'Fira Code', monospace; border-left: 2px solid #ef4444; }
+        
+        /* Falling Tokens Animation */
+        #token-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .token {
+            position: absolute;
+            top: -50px;
+            opacity: 0.7;
+            animation: fall linear infinite;
+        }
+        
+        @keyframes fall {
+            to {
+                transform: translateY(105vh) rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div id="token-rain"></div>
+
+    <div class="glass max-w-lg w-full rounded-[2.5rem] p-8 border-t border-white/10">
+        
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter uppercase text-red-500 italic">Zablon<span class="text-white">Control</span></h1>
+                <p id="status-text" class="text-[10px] uppercase tracking-[0.2em] text-gray-500">● 2026 Node Stanby</p>
+            </div>
+            <div id="status-glow" class="w-3 h-3 rounded-full bg-red-600 shadow-[0_0_15px_red]"></div>
+        </div>
+
+        <div class="bg-red-950/20 rounded-2xl p-4 border border-red-500/30 mb-6">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-red-500 text-[10px] font-black uppercase tracking-widest">Emergency Protocol</span>
+                <span class="text-[8px] text-gray-600">ONLY USE IF BUG DETECTED</span>
+            </div>
+            <button onclick="emergencyKill()" class="w-full py-3 bg-red-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-red-500 transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)] active:scale-95">
+                🔥 TRIGGER EMERGENCY KILL SWITCH
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-white/5 rounded-2xl p-4 border border-white/5">
+                <p class="text-[10px] text-gray-500 uppercase font-bold">Contract</p>
+                <div class="flex items-baseline gap-1">
+                    <span id="balance" class="text-2xl font-mono font-bold text-green-400">0.00</span>
+                    <span class="text-[10px] text-gray-500">POL</span>
+                </div>
+            </div>
+            <div class="bg-white/5 rounded-2xl p-4 border border-white/5">
+                <p class="text-[10px] text-gray-500 uppercase font-bold">Network Gas</p>
+                <span id="gas-price" class="text-2xl font-mono font-bold text-blue-400">--</span>
+            </div>
+        </div>
+
+        <div class="terminal rounded-xl p-4 mb-6 h-24 overflow-y-auto text-[10px] text-gray-400 scrollbar-hide">
+            <div id="log">
+                <span class="text-red-500">[WARN]</span> System unlinked. Connect wallet.<br>
+                <span class="text-gray-600">[SYS]</span> Matrix Background Loaded.<br>
+            </div>
+        </div>
+
+        <button id="btnConnect" onclick="connectWallet()" class="w-full py-4 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all active:scale-95 mb-4 shadow-xl text-xs uppercase tracking-widest">
+            ACTIVATE VAULT
+        </button>
+
+        <div class="flex gap-3">
+            <button onclick="updateData()" class="flex-1 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-xl text-[10px] uppercase">
+                Refresh Sync
+            </button>
+            <button onclick="manualPush()" class="flex-1 py-3 bg-yellow-600/20 border border-yellow-600/40 text-yellow-500 font-bold rounded-xl text-[10px] uppercase">
+                Push to Binance
+            </button>
+        </div>
+
+        <p class="text-center text-[8px] text-gray-700 mt-8 uppercase tracking-[0.4em]">Binance: 0xcba4...2a95</p>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const BINANCE_ADDRESS = "0xcba4b6ccb70a4973096ed46b613160e6f7c42a95"; 
+        const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // REPLACE AFTER DEPLOY
+
+        // Token Logos (Using CryptoIcons CDN)
+        const tokenLogos = [
+            'https://cryptologos.cc/logos/polygon-matic-logo.png?v=032', // POL
+            'https://cryptologos.cc/logos/wrapped-bitcoin-wbtc-logo.png?v=032', // WBTC
+            'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=032', // WETH
+            'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=032', // USDC
+            'https://cryptologos.cc/logos/dai-dai-logo.png?v=032', // DAI
+            'https://cryptologos.cc/logos/chainlink-link-logo.png?v=032' // LINK
+        ];
+
+        let provider, signer;
+
+        // --- 1. RAIN ANIMATION ENGINE ---
+        function createTokenRain() {
+            const container = document.getElementById('token-rain');
+            const tokenCount = 50; // Total tokens on screen
+
+            for (let i = 0; i < tokenCount; i++) {
+                setTimeout(() => {
+                    const token = document.createElement('img');
+                    token.src = tokenLogos[Math.floor(Math.random() * tokenLogos.length)];
+                    token.className = 'token';
+                    
+                    // Randomize Starting Position, Size, and Speed
+                    token.style.left = Math.random() * 100 + 'vw';
+                    const size = Math.random() * 20 + 15; // 15px to 35px
+                    token.style.width = size + 'px';
+                    token.style.height = size + 'px';
+                    
+                    const duration = Math.random() * 5 + 3; // 3s to 8s
+                    token.style.animationDuration = duration + 's';
+                    
+                    const delay = Math.random() * 5; // Up to 5s delay
+                    token.style.animationDelay = delay + 's';
+
+                    container.appendChild(token);
+                }, i * 100); // Stagger the initial creation
+            }
+        }
+
+        // Initialize Rain
+        createTokenRain();
+
+        // --- 2. BLOCKCHAIN LOGIC ---
+        function addLog(msg, color="gray-400") {
+            const log = document.getElementById("log");
+            log.innerHTML += `<div class="text-${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function connectWallet() {
+            if (window.ethereum) {
+                try {
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+                    signer = provider.getSigner();
+                    document.getElementById("btnConnect").innerText = "VAULT ACTIVATED";
+                    document.getElementById("btnConnect").classList.add("opacity-50", "cursor-not-allowed");
+                    document.getElementById("status-text").innerText = "● Control Active";
+                    document.getElementById("status-glow").classList.replace("bg-red-600", "bg-green-500");
+                    addLog("Wallet Linked. Node Standing By.", "green-400");
+                    updateData();
+                    setInterval(updateData, 30000);
+                } catch (err) { addLog("Connection Refused.", "red-500"); }
+            }
+        }
+
+        async function updateData() {
+            if (!provider || CONTRACT_ADDRESS.startsWith("0x000")) return;
+            try {
+                const balance = await provider.getBalance(CONTRACT_ADDRESS);
+                document.getElementById("balance").innerText = parseFloat(ethers.utils.formatEther(balance)).toFixed(3);
+                const gas = await provider.getGasPrice();
+                document.getElementById("gas-price").innerText = Math.round(ethers.utils.formatUnits(gas, 'gwei'));
+            } catch (e) { console.log("Sync failed."); }
+        }
+
+        async function emergencyKill() {
+            if(!confirm("⚠️ WARNING: This will stop all bot logic and withdraw all POL immediately. Continue?")) return;
+            addLog("CRITICAL: Triggering Emergency Kill Switch...", "red-500");
+            
+            const abi = ["function withdraw(address _token) external"];
+            const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+            try {
+                const tx = await contract.withdraw("0x0000000000000000000000000000000000000000");
+                addLog("Kill Switch Sent! Hash: " + tx.hash.substring(0,10), "yellow-500");
+                await tx.wait();
+                addLog("SUCCESS: All funds secured in your wallet.", "green-400");
+                updateData();
+            } catch (e) { addLog("Kill Failed: " + e.message, "red-500"); }
+        }
+
+        function manualPush() {
+            addLog("Binance sync initiated...", "yellow-500");
+            // Placeholder for Binance transfer logic...
+        }
+    </script>
+</body>
+</html>
