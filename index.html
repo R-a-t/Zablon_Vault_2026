@@ -3,154 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zablon POL Node | Controller</title>
+    <title>Zablon POL Node | 2026 Controller</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module">
-        import { ethers } from "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.min.js";
-        window.ethers = ethers;
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
-        body { background: #0a0a0f; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; }
-        .card { background: rgba(30, 30, 45, 0.6); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 24px; backdrop-filter: blur(10px); }
-        .btn-toggle.active { background: #8b5cf6; color: white; box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); }
-        .glitch-text { text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+        body { background: #08080c; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; }
+        .card { background: rgba(20, 20, 30, 0.7); border: 1px solid rgba(139, 92, 246, 0.15); border-radius: 28px; backdrop-filter: blur(12px); }
+        .btn-toggle.active { background: #8b5cf6; color: white; box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+        .glass-input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); }
         #log::-webkit-scrollbar { width: 4px; }
-        #log::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        #log::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .stats-val { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen">
     <div class="max-w-md w-full space-y-6">
         
-        <div class="flex justify-between items-end px-2">
+        <div class="flex justify-between items-center px-1">
             <div>
-                <h1 class="text-2xl font-black text-purple-500 uppercase leading-none italic glitch-text">Zablon</h1>
-                <p class="text-[10px] font-bold text-gray-500 tracking-[0.3em] uppercase">POL Native Node v2.6</p>
+                <h1 class="text-2xl font-black text-purple-500 italic tracking-tighter">ZABLON <span class="text-white">v2.6</span></h1>
+                <p class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.4em]">POL-Native Flash Engine</p>
             </div>
-            <div class="text-right">
-                <span class="text-[10px] bg-green-500/10 text-green-500 px-2 py-1 rounded-md font-bold">● SYSTEM ONLINE</span>
-            </div>
+            <button id="connect-btn" onclick="connectWallet()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-black rounded-xl transition-all shadow-lg shadow-purple-900/40">
+                CONNECT WALLET
+            </button>
         </div>
 
-        <div class="card p-8 border-t-4 border-purple-500 relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10">
-                <svg width="60" height="60" viewBox="0 0 24 24" fill="white"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
+        <div class="card p-8 border-t-2 border-purple-500/50 relative">
+            <div class="flex justify-between items-start mb-2">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Protected Profit</p>
+                <span class="text-[10px] text-green-500 font-bold bg-green-500/10 px-2 py-0.5 rounded">AUTO-SHIELD ON</span>
             </div>
-            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Protected Profit (WPOL)</p>
             <div class="flex items-baseline gap-2">
                 <h2 id="live-bal" class="text-6xl font-black text-white tracking-tighter">0.00</h2>
-                <span class="text-purple-500 font-bold">POL</span>
+                <span class="text-purple-500 font-black text-xl">POL</span>
             </div>
-            <p id="usd-val" class="text-sm text-gray-500 mt-1 font-medium">≈ $0.00 USD</p>
+            <p id="usd-val" class="text-xs text-gray-500 font-mono mt-1">≈ $0.00 USD</p>
         </div>
 
-        <div class="card p-6">
-            <div class="flex justify-between items-center mb-6">
-                <p class="text-[11px] font-black text-gray-400 tracking-tighter uppercase">Performance Metrics</p>
-                <div class="flex gap-1 bg-black/40 p-1 rounded-xl">
-                    <button onclick="updateView('Daily')" id="btn-Daily" class="btn-toggle active px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all">24H</button>
-                    <button onclick="updateView('Weekly')" id="btn-Weekly" class="btn-toggle px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all">7D</button>
-                    <button onclick="updateView('Monthly')" id="btn-Monthly" class="btn-toggle px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all">30D</button>
+        <div class="card p-5">
+            <div class="flex justify-between items-center mb-4">
+                <p class="text-[10px] font-bold text-gray-400 uppercase">Performance</p>
+                <div class="flex gap-1 bg-black/40 p-1 rounded-lg">
+                    <button onclick="changePeriod('Daily')" id="btn-Daily" class="btn-toggle active px-3 py-1 rounded-md text-[9px] font-bold">24H</button>
+                    <button onclick="changePeriod('Weekly')" id="btn-Weekly" class="btn-toggle px-3 py-1 rounded-md text-[9px] font-bold">7D</button>
+                    <button onclick="changePeriod('Monthly')" id="btn-Monthly" class="btn-toggle px-3 py-1 rounded-md text-[9px] font-bold">30D</button>
                 </div>
             </div>
-            <canvas id="perfChart" height="140"></canvas>
+            <div style="height: 120px;"><canvas id="perfChart"></canvas></div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <button onclick="claimProfit()" class="py-5 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-2xl transition-all active:scale-95 shadow-lg shadow-purple-900/20">
-                WITHDRAW WPOL
+        <div class="space-y-3">
+            <button onclick="claimProfit()" class="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-gray-200 transition-all active:scale-[0.98]">
+                WITHDRAW PROFITS (WPOL)
             </button>
-            <button onclick="pushToBinance()" class="py-5 bg-white hover:bg-gray-200 text-black font-black rounded-2xl transition-all active:scale-95">
-                PUSH TO BINANCE
-            </button>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="ensureGasManual()" class="py-3 bg-purple-900/30 border border-purple-500/30 text-purple-400 text-[10px] font-bold rounded-xl hover:bg-purple-900/50">
+                    MANUAL REFILL
+                </button>
+                <button onclick="pushToBinance()" class="py-3 bg-gray-900 border border-white/10 text-gray-400 text-[10px] font-bold rounded-xl hover:bg-gray-800">
+                    PUSH TO BINANCE
+                </button>
+            </div>
         </div>
 
-        <div class="card bg-black/40 border-none p-4">
-            <div id="log" class="text-[10px] font-mono text-gray-400 h-28 overflow-y-auto space-y-1">
-                <div class="text-purple-400">> [SYSTEM] Booting Zablon POL-Native Engine...</div>
-                <div class="text-gray-600">> [ASSETS] WETH, WBTC, LINK, USDC Loaded.</div>
-                <div class="text-gray-600">> [SHIELD] Gas Protection Active: Min 1.0 POL.</div>
+        <div class="card bg-black/60 border-none p-4">
+            <div id="log" class="text-[9px] font-mono text-gray-500 h-24 overflow-y-auto space-y-1">
+                <div class="text-purple-500/80">> [INITIALIZING] POL Ecosystem v2.6.0...</div>
+                <div class="text-gray-600">> [SCANNING] Paths: WETH, WBTC, LINK, USDC.</div>
+                <div class="text-gray-600">> [READY] Connect wallet to activate dashboard.</div>
             </div>
         </div>
     </div>
 
-    <script>
-        const BINANCE_ADDR = "0xcba4b6ccb70a4973096ed46b613160e6f7c42a95";
-        const WPOL_ADDR = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270";
-        let CONTRACT_ADDR = "PASTE_YOUR_CONTRACT_ADDRESS_HERE";
-        
-        let provider, signer, botContract;
-        const POL_PRICE = 0.091; // April 2026 Price Estimate
+    <script type="module">
+        import { ethers } from "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.min.js";
 
-        function log(msg, color = "gray-400") {
+        // CONFIGURATION
+        const WPOL_ADDR = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270";
+        const CONTRACT_ADDR = "PASTE_YOUR_CONTRACT_ADDRESS_HERE";
+        const POL_PRICE = 0.091; // 2026 Price Data
+
+        let provider, signer, botContract;
+
+        // 1. CONNECT WALLET
+        window.connectWallet = async () => {
+            if (!window.ethereum) return alert("Please install MetaMask!");
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                const accounts = await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                
+                botContract = new ethers.Contract(CONTRACT_ADDR, [
+                    "function withdraw(address) external",
+                    "function ensureGas() external"
+                ], signer);
+
+                document.getElementById('connect-btn').innerText = `CONNECTED: ${accounts[0].substring(0,6)}`;
+                document.getElementById('connect-btn').classList.replace('bg-purple-600', 'bg-green-600');
+                log("Wallet Connected Successfully.", "green-400");
+                refreshData();
+                setInterval(refreshData, 15000);
+            } catch (e) {
+                log("Connection Failed: " + e.message, "red-400");
+            }
+        };
+
+        // 2. DATA REFRESH
+        async function refreshData() {
+            if (!provider) return;
+            try {
+                const wpol = new ethers.Contract(WPOL_ADDR, ["function balanceOf(address) view returns (uint256)"], provider);
+                const bal = await wpol.balanceOf(CONTRACT_ADDR);
+                const formatted = parseFloat(ethers.formatEther(bal)).toFixed(2);
+                
+                document.getElementById('live-bal').innerText = formatted;
+                document.getElementById('usd-val').innerText = `≈ $${(formatted * POL_PRICE).toFixed(2)} USD`;
+            } catch (e) { console.error("Refresh Error"); }
+        }
+
+        // 3. ACTION BUTTONS
+        window.claimProfit = async () => {
+            if (!signer) return alert("Please connect wallet first!");
+            log("Sending Withdrawal Request for WPOL...", "purple-400");
+            try {
+                const tx = await botContract.withdraw(WPOL_ADDR);
+                log(`Hash: ${tx.hash.substring(0,16)}...`, "gray-500");
+                await tx.wait();
+                log("SUCCESS: Profits moved to wallet.", "green-500");
+            } catch (e) { log("FAILED: " + (e.reason || "User Cancelled"), "red-400"); }
+        };
+
+        window.ensureGasManual = async () => {
+            if (!signer) return alert("Please connect wallet first!");
+            log("Triggering Manual Gas Refill (1 POL)...", "purple-400");
+            try {
+                const tx = await botContract.ensureGas();
+                await tx.wait();
+                log("SUCCESS: Gas tank refilled from profits.", "green-500");
+            } catch (e) { log("REFILL FAILED: No profit available.", "red-400"); }
+        };
+
+        // UI HELPERS
+        function log(msg, color) {
             const l = document.getElementById('log');
             l.innerHTML += `<div class="text-${color}">> ${msg}</div>`;
             l.scrollTop = l.scrollHeight;
         }
 
-        async function init() {
-            if (window.ethereum) {
-                provider = new ethers.BrowserProvider(window.ethereum);
-                signer = await provider.getSigner();
-                botContract = new ethers.Contract(CONTRACT_ADDR, [
-                    "function withdraw(address) external",
-                    "function ensureGas() external"
-                ], signer);
-                refreshData();
-                setInterval(refreshData, 10000);
-            }
-        }
-
-        async function refreshData() {
-            try {
-                // We check WPOL (Profit) balance specifically
-                const wpolContract = new ethers.Contract(WPOL_ADDR, ["function balanceOf(address) view returns (uint256)"], provider);
-                const balance = await wpolContract.balanceOf(CONTRACT_ADDR);
-                const formatted = parseFloat(ethers.formatEther(balance)).toFixed(2);
-                
-                document.getElementById('live-bal').innerText = formatted;
-                document.getElementById('usd-val').innerText = `≈ $${(formatted * POL_PRICE).toFixed(2)} USD`;
-            } catch (e) { console.error("Update failed"); }
-        }
-
-        async function claimProfit() {
-            log("Shielding profits... Initiating WPOL withdrawal", "purple-400");
-            try {
-                const tx = await botContract.withdraw(WPOL_ADDR);
-                log(`Transaction Sent: ${tx.hash.substring(0,10)}...`, "gray-500");
-                await tx.wait();
-                log("✅ Profits secured in wallet.", "green-500");
-            } catch (e) { log("❌ Withdrawal failed or no balance.", "red-500"); }
-        }
-
-        async function pushToBinance() {
-            log("Initiating External Push to Binance...", "white");
-            // Add custom transfer logic here
-        }
-
-        // Performance Chart Initialization
+        // CHART LOGIC
         const ctx = document.getElementById('perfChart').getContext('2d');
         let chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                labels: ['1AM', '4AM', '8AM', '12PM', '4PM', '8PM'],
                 datasets: [{
-                    data: [12, 19, 15, 25, 22, 30],
+                    data: [2, 5, 4, 12, 8, 15],
                     borderColor: '#8b5cf6',
-                    borderWidth: 3,
+                    borderWidth: 2,
                     tension: 0.4,
                     pointRadius: 0,
                     fill: true,
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)'
+                    backgroundColor: 'rgba(139, 92, 246, 0.05)'
                 }]
             },
             options: {
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: { x: { display: false }, y: { display: false } }
             }
         });
 
-        window.onload = init;
+        window.changePeriod = (p) => {
+            document.querySelectorAll('.btn-toggle').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-'+p).classList.add('active');
+            log(`View changed to ${p} summary.`, "gray-500");
+        };
     </script>
 </body>
 </html>
