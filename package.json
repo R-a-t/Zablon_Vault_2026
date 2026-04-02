@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "@aave/core-v3": "^1.19.3",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@vercel/kv": "^3.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.16.0",
+    "luxon": "^3.7.2",
+    "node-cron": "^4.2.1",
+    "node-telegram-bot-api": "^0.67.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.19.0"
+  },
+  "type": "module"
+}
