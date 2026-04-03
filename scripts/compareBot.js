@@ -7,7 +7,13 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 // --- 1. INITIAL SETUP & CONNECTIONS ---
-const provider = new ethers.WebSocketProvider(process.env.POLYGON_WSS);
+const RPC_URL = process.env.POLYGON_WSS || process.env.RPC_URL;
+const isWss = RPC_URL.startsWith('wss://');
+
+const provider = isWss 
+    ? new ethers.WebSocketProvider(RPC_URL) 
+    : new ethers.JsonRpcProvider(RPC_URL);
+
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const tgBot = new TelegramBot(process.env.TELEGRAM_TOKEN);
 const CHAT_ID = process.env.CHAT_ID;
@@ -48,12 +54,14 @@ const sendAlert = (msg) => {
 async function updateVercel(block, status) {
     try {
         await kv.hset('zablon_stats', {
-            last_block: block,
+            last_block: block.toString(),
             status: status,
-            total_profit: totalProfits,
+            total_profit: totalProfits.toString(),
             last_update: DateTime.now().setZone("Africa/Nairobi").toFormat("HH:mm:ss")
         });
-    } catch (e) { console.error("KV Error:", e.message); }
+    } catch (e) { 
+        console.error("KV Error:", e.message); 
+    }
 }
 
 // --- 5. SCHEDULING (KENYAN TIME) ---
@@ -68,11 +76,13 @@ cron.schedule("0 */4 * * *", () => {
 cron.schedule("0 8 * * *", () => {
     const date = DateTime.now().setZone("Africa/Nairobi").toFormat("dd LLL yyyy");
     sendAlert(`📅 *Daily Report: ${date}*\nTotal Blocks: ${blocksScanned}\nProfit Taken: ${totalProfits} POL\nStatus: Hunting...`);
-    blocksScanned = 0; // Reset daily counter
+    blocksScanned = 0; 
 }, { timezone: "Africa/Nairobi" });
 
 // --- 6. CORE SCANNING LOGIC ---
 console.log("🚀 Zablon Master Bot Starting...");
+console.log(`📡 Mode: ${isWss ? "WebSocket" : "HTTPS Polling"}`);
+
 sendAlert("🚀 *Zablon Master Bot Online*\nMonitoring: LINK, WBTC, WETH, WPOL\nSchedule: 8AM EAT Reports Active.");
 
 provider.on("block", async (blockNumber) => {
@@ -94,22 +104,23 @@ provider.on("block", async (blockNumber) => {
                 sushiContract.getAmountsOut(amountIn, path)
             ]);
 
-            // Profit threshold: 0.5% (1005 / 1000)
             if (outSushi[1] > (outQuick[1] * 1005n) / 1000n) {
                 const msg = `💰 *PROFIT OPPORTUNITY!* \nAsset: ${asset.name}\nBuy: QuickSwap\nSell: SushiSwap`;
                 console.log(msg);
                 sendAlert(msg);
-                // Flash Loan Trigger would go here
             }
-        } catch (err) { /* Pool might not exist, skipping silently */ }
+        } catch (err) { /* Pool might not exist */ }
     }
 
-    // Update Vercel Dashboard every block
-    updateVercel(blockNumber, "Scanning Assets...");
+    await updateVercel(blockNumber, "Scanning Assets...");
 });
 
-// Error handling for WSS disconnection
-provider._websocket.on("close", () => {
-    console.error("WSS Disconnected! Restarting...");
-    process.exit(1); // PM2 will restart the process automatically
-});
+// --- CONNECTION MONITORING ---
+if (provider._websocket) {
+    provider._websocket.on("close", () => {
+        console.error("WSS Disconnected! Restarting...");
+        process.exit(1);
+    });
+} else {
+    console.log("ℹ️ Stability managed by HTTP Polling.");
+}
